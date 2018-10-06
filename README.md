@@ -1,8 +1,9 @@
 # brewfather plugin for CraftBeerPi 3.0
 Update Brewfather batch fermentation data from CraftBeerPi3 Tilt devices. Currently the code handles RED and PINK Tilt devices.
 
-## Pre-requisits
+## Pre-requisites
 Brewfather https://web.brewfather.app
+
 CraftBeerPi 3.0 https://github.com/Manuel83/craftbeerpi3
 
 ## Configuration for CraftBeerPi
