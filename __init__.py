@@ -1,9 +1,12 @@
+# brewfather craftbeerpi3 plugin
+# Log Tilt temperature and SG data from CraftBeerPi 3.0 to the brewfather app
+# https://brewfather.app/
+#
 # Note this code is heavily based on the Thingspeak plugin by Atle Ravndal
 # and I acknowledge his efforts have made the creation of this plugin possible
 #
 # TODO
 #	* Check result of request() call and react
-#	* Log results to multiple places (brewstat.us, brewfather?, MQTT?
 
 from modules import cbpi
 from thread import start_new_thread
@@ -16,7 +19,7 @@ drop_first = None
 
 # Parameters
 brewfather_comment = None
-brewfather_url = None
+brewfather_id = None
 
 # brewfather uses brew name to direct data to a particular batch 
 #   associate a Tilt color with a Brew Name here. I don't like
@@ -33,15 +36,20 @@ def log(s):
 def init(cbpi):
     cbpi.app.logger.info("brewfather plugin Initialize")
     log("Brewfather params")
+# the comment that goes along with each post (visible in the edit data screen)
     global brewfather_comment
-    global brewfather_url
+# the unique id value (the bit following id= in the "Cloud URL" in the setting screen
+    global brewfather_id
+# the batch number for the Red Tilt
     global brewfather_RED_beer
+# the batch number for the Pink Tilt
+# I guess for now you just keep adding these for each additonal tilt
     global brewfather_PINK_beer
 
     brewfather_comment = cbpi.get_config_parameter("brewfather_comment", None)
     log("Brewfather brewfather_comment %s" % brewfather_comment)
-    brewfather_url = cbpi.get_config_parameter("brewfather_url", None)
-    log("Brewfather brewfather_url %s" % brewfather_url)
+    brewfather_id = cbpi.get_config_parameter("brewfather_id", None)
+    log("Brewfather brewfather_id %s" % brewfather_id)
     brewfather_RED_beer = cbpi.get_config_parameter("brewfather_RED_beer", None)
     log("Brewfather brewfather_RED_beer %s" % brewfather_RED_beer)
     brewfather_PINK_beer = cbpi.get_config_parameter("brewfather_PINK_beer", None)
@@ -54,13 +62,13 @@ def init(cbpi):
 	    cbpi.add_config_parameter("brewfather_comment", "", "text", "Brewfather comment")
 	except:
 	    cbpi.notify("Brewfather Error", "Unable to update Brewfather comment parameter", type="danger")
-    if brewfather_url is None:
+    if brewfather_id is None:
 	log("Init brewfather config URL")
 	try:
 # TODO: is param2 a default value?
-	    cbpi.add_config_parameter("brewfather_url", "", "text", "Brewfather url")
+	    cbpi.add_config_parameter("brewfather_id", "", "text", "Brewfather id")
 	except:
-	    cbpi.notify("Brewfather Error", "Unable to update Brewfather url parameter", type="danger")
+	    cbpi.notify("Brewfather Error", "Unable to update Brewfather id parameter", type="danger")
     if brewfather_RED_beer is None:
 	log("Init brewfather config RED_beer")
 	try:
@@ -78,6 +86,7 @@ def init(cbpi):
     log("Brewfather params ends")
 
 # interval=900 is 900 seconds, 15 minutes, same as the Tilt Android App logs.
+# if you try to reduce this, brewfather will throw "ignored" status back at you
 @cbpi.backgroundtask(key="brewfather_task", interval=900)
 def brewfather_background_task(api):
     log("brewfather background task")
@@ -86,7 +95,7 @@ def brewfather_background_task(api):
         drop_first = False
         return False
 
-    if brewfather_url is None:
+    if brewfather_id is None:
         return False
 # TODO might want to check we have at least one COLOR_beer param here too
 
@@ -106,25 +115,32 @@ def brewfather_background_task(api):
 	    if (value.instance.sensorType == "Temperature"):
 # A Tilt Temperature device is the first of the Tilt pair of sensors so
 #    reset the data block to empty
-		data = {}
+		payload = "{ "
 # generate timestamp in "Excel" format
-		data['Timepoint'] = now.toordinal() - 693594 + (60*60*now.hour + 60*now.minute + now.second)/float(24*60*60)
-		data['Color'] = value.instance.color
+		timepoint = now.toordinal() - 693594 + (60*60*now.hour + 60*now.minute + now.second)/float(24*60*60)
+		payload += " \"Timepoint\": \"%s\",\r\n" % timepoint
+		payload += " \"Color\": \"%s\",\r\n" % value.instance.color
 		if (value.instance.color == 'Red'):
-		    data['beer'] = cbpi.get_config_parameter("brewfather_RED_beer", None)
+		    payload += " \"Beer\": \"%s\",\r\n" % cbpi.get_config_parameter("brewfather_RED_beer", None)
 		elif (value.instance.color == 'Pink'):
-		    data['beer'] = cbpi.get_config_parameter("brewfather_PINK_beer", None)
+                    payload += " \"Beer\": \"%s\",\r\n" % cbpi.get_config_parameter("brewfather_PINK_beer", None)
 # TODO: would this work here? data['beer'] = cbpi.get_config_parameter("brewfather_%s" % value.instance.color, None)
-		data['Temp'] = value.instance.last_value
+		temp = value.instance.last_value
 # brewfather expects *F so convert back if we use C
 		if (cbpi.get_config_parameter("unit",None) == "C"):
-		    data['Temp'] = value.instance.last_value * 1.8 + 32
+		    temp = value.instance.last_value * 1.8 + 32
+                payload += " \"Temp\": \"%s\",\r\n" % temp
 	    if (value.instance.sensorType == "Gravity"):
-		data['SG'] = value.instance.last_value
-		data['Comment'] = cbpi.get_config_parameter("brewfather_comment", None)
-		log("Data %s" % data)
-		headers = {'content-type': '"application/x-www-form-urlencoded; charset=utf-8"'}
-		url = cbpi.get_config_parameter("brewfather_url", None)
-		r = requests.post(url, headers=headers, data=data)
+                payload += " \"SG\": \"%s\",\r\n" % value.instance.last_value
+                payload += " \"Comment\": \"%s\" }" % cbpi.get_config_parameter("brewfather_comment", None)
+		log("Payload %s" % payload)
+		url = "http://log.brewfather.net/tilt"
+		headers = {
+		    'Content-Type': "application/json",
+		    'Cache-Control': "no-cache"
+		    }
+		id = cbpi.get_config_parameter("brewfather_id", None)
+		querystring = {"id":id}
+		r = requests.request("POST", url, data=payload, headers=headers, params=querystring)
 		log("Result %s" % r.text)
     log("brewfather done")
