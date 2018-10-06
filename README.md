@@ -22,3 +22,5 @@ CraftBeerPi 3.0 https://github.com/Manuel83/craftbeerpi3
 2. Go to the Fermenting tab of the Brewfather Batches for the relevant batch. The graph will show logged temperature and Gravity values
 3. The Edit button will show individual logged results and the comment.
 
+## Improvements
+At the moment it only caters for RED and PINK Tilt devices as those are the ones I have. It's not hard to alter the code to change those to your devices or even add more.
