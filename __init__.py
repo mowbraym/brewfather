@@ -14,7 +14,7 @@ import logging
 import requests
 import datetime
 
-DEBUG = True
+DEBUG = False
 drop_first = None
 
 # Parameters
