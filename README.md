@@ -1,6 +1,9 @@
 # brewfather plugin for CraftBeerPi 3.0
 Update Brewfather batch fermentation data from CraftBeerPi3 Tilt devices. Currently the code handles RED and PINK Tilt devices.
 
+## IMPORTANT NOTE
+The handling of Tilt connectivity has changed in the latest releases of BrewFather (for the better). It now can allocate the Tilt to a Batch at the BrewFather end. This means that this module no longer needs to allocate a Batch Number to a Tilt at the craftbeerpi end. I think this means that it can now work for any number of Tilts and regardless of Colour, just do all the set up at the BrewFather end and send the data from craftbeerpi leaving the Beer Name/Batch Number field blank. I am testing this over the next few days and will probably just remove the unnecessary parameter fields in an update.
+
 ## Pre-requisites
 Brewfather https://web.brewfather.app
 
