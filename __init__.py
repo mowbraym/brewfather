@@ -5,6 +5,11 @@
 # Note this code is heavily based on the Thingspeak plugin by Atle Ravndal
 # and I acknowledge his efforts have made the creation of this plugin possible
 #
+# 2018.11.09 -	Brewfather can now allocate Tilt by colour in the app. This is
+#		a better way to handle this end also, as we do not need separate
+#		parameters for each Tilt Colour Beer Name.
+#		Get rid if the Beer Name parameters and pass all Tilt data to
+#		Brewfather and let it work out where to put the data.
 # TODO
 #	* Check result of request() call and react
 
@@ -24,8 +29,10 @@ brewfather_id = None
 # brewfather uses brew name to direct data to a particular batch 
 #   associate a Tilt color with a Brew Name here. I don't like
 #   doing it this way must be an array or some way better to do this
-brewfather_RED_beer = None
-brewfather_PINK_beer = None
+# 2018.11.09 - Not any more it doesn't. Remove _beer parameters and processing
+#brewfather_RED_beer = None
+#brewfather_PINK_beer = None
+# 2018.11.09 - End Changed code
 
 def log(s):
     if DEBUG:
@@ -40,20 +47,24 @@ def init(cbpi):
     global brewfather_comment
 # the unique id value (the bit following id= in the "Cloud URL" in the setting screen
     global brewfather_id
+# 2018.11.09 - Remove _beer parameters and processing
 # the batch number for the Red Tilt
-    global brewfather_RED_beer
+#    global brewfather_RED_beer
 # the batch number for the Pink Tilt
 # I guess for now you just keep adding these for each additonal tilt
-    global brewfather_PINK_beer
+#    global brewfather_PINK_beer
+# 2018.11.09 - End Changed code
 
     brewfather_comment = cbpi.get_config_parameter("brewfather_comment", None)
     log("Brewfather brewfather_comment %s" % brewfather_comment)
     brewfather_id = cbpi.get_config_parameter("brewfather_id", None)
     log("Brewfather brewfather_id %s" % brewfather_id)
-    brewfather_RED_beer = cbpi.get_config_parameter("brewfather_RED_beer", None)
-    log("Brewfather brewfather_RED_beer %s" % brewfather_RED_beer)
-    brewfather_PINK_beer = cbpi.get_config_parameter("brewfather_PINK_beer", None)
-    log("Brewfather brewfather_PINK_beer %s" % brewfather_PINK_beer)
+# 2018.11.09 - Remove _beer parameters and processing
+#    brewfather_RED_beer = cbpi.get_config_parameter("brewfather_RED_beer", None)
+#    log("Brewfather brewfather_RED_beer %s" % brewfather_RED_beer)
+#    brewfather_PINK_beer = cbpi.get_config_parameter("brewfather_PINK_beer", None)
+#    log("Brewfather brewfather_PINK_beer %s" % brewfather_PINK_beer)
+# 2018.11.09 - End Changed code
 
     if brewfather_comment is None:
 	log("Init brewfather config Comment")
@@ -69,20 +80,22 @@ def init(cbpi):
 	    cbpi.add_config_parameter("brewfather_id", "", "text", "Brewfather id")
 	except:
 	    cbpi.notify("Brewfather Error", "Unable to update Brewfather id parameter", type="danger")
-    if brewfather_RED_beer is None:
-	log("Init brewfather config RED_beer")
-	try:
-# TODO: is param2 a default value?
-	    cbpi.add_config_parameter("brewfather_RED_beer", "", "text", "Brewfather RED_beer")
-	except:
-	    cbpi.notify("Brewfather Error", "Unable to update Brewfather RED_beer parameter", type="danger")
-    if brewfather_PINK_beer is None:
-	log("Init brewfather config PINK_beer")
-	try:
-# TODO: is param2 a default value?
-	    cbpi.add_config_parameter("brewfather_PINK_beer", "", "text", "Brewfather PINK_beer")
-	except:
-	    cbpi.notify("Brewfather Error", "Unable to update Brewfather PINK_beer parameter", type="danger")
+# 2018.11.09 - Remove _beer parameters and processing
+#    if brewfather_RED_beer is None:
+#	log("Init brewfather config RED_beer")
+#	try:
+## TODO: is param2 a default value?
+#	    cbpi.add_config_parameter("brewfather_RED_beer", "", "text", "Brewfather RED_beer")
+#	except:
+#	    cbpi.notify("Brewfather Error", "Unable to update Brewfather RED_beer parameter", type="danger")
+#    if brewfather_PINK_beer is None:
+#	log("Init brewfather config PINK_beer")
+#	try:
+## TODO: is param2 a default value?
+#	    cbpi.add_config_parameter("brewfather_PINK_beer", "", "text", "Brewfather PINK_beer")
+#	except:
+#	    cbpi.notify("Brewfather Error", "Unable to update Brewfather PINK_beer parameter", type="danger")
+# 2018.11.09 - End Changed code
     log("Brewfather params ends")
 
 # interval=900 is 900 seconds, 15 minutes, same as the Tilt Android App logs.
@@ -97,7 +110,6 @@ def brewfather_background_task(api):
 
     if brewfather_id is None:
         return False
-# TODO might want to check we have at least one COLOR_beer param here too
 
     now = datetime.datetime.now()
     for key, value in cbpi.cache.get("sensors").iteritems():
@@ -120,11 +132,15 @@ def brewfather_background_task(api):
 		timepoint = now.toordinal() - 693594 + (60*60*now.hour + 60*now.minute + now.second)/float(24*60*60)
 		payload += " \"Timepoint\": \"%s\",\r\n" % timepoint
 		payload += " \"Color\": \"%s\",\r\n" % value.instance.color
-		if (value.instance.color == 'Red'):
-		    payload += " \"Beer\": \"%s\",\r\n" % cbpi.get_config_parameter("brewfather_RED_beer", None)
-		elif (value.instance.color == 'Pink'):
-                    payload += " \"Beer\": \"%s\",\r\n" % cbpi.get_config_parameter("brewfather_PINK_beer", None)
-# TODO: would this work here? data['beer'] = cbpi.get_config_parameter("brewfather_%s" % value.instance.color, None)
+# 2018.11.09 - 	Remove _beer parameters and processing
+#		Just pass "Beer" as an empty value now
+#		if (value.instance.color == 'Red'):
+#		    payload += " \"Beer\": \"%s\",\r\n" % cbpi.get_config_parameter("brewfather_RED_beer", None)
+#		elif (value.instance.color == 'Pink'):
+#                    payload += " \"Beer\": \"%s\",\r\n" % cbpi.get_config_parameter("brewfather_PINK_beer", None)
+## TODO: would this work here? data['beer'] = cbpi.get_config_parameter("brewfather_%s" % value.instance.color, None)
+		payload += " \"Beer\": \"\",\r\n"
+# 2018.11.09 - End Changed code
 		temp = value.instance.last_value
 # brewfather expects *F so convert back if we use C
 		if (cbpi.get_config_parameter("unit",None) == "C"):
